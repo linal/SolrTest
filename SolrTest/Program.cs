@@ -19,7 +19,7 @@ namespace SolrTest
             Startup.Init<FileIndex>("http://localhost:8983/solr/YeticodeCollection");
             var solr = ServiceLocator.Current.GetInstance<ISolrOperations<FileIndex>>();
 
-            var action = string.Empty;
+            string action;
             do
             {
                 Console.WriteLine("Availabe Actions:");
@@ -28,6 +28,7 @@ namespace SolrTest
                 Console.WriteLine("\t[2] Index");
                 Console.WriteLine("\t[3] Update");
                 Console.WriteLine("\t[4] Search");
+                Console.WriteLine("\t[5] Set Programming Files Delete Flag True");
                 Console.WriteLine("");
                 Console.Write("Action: ");
                 action = Console.ReadLine();
@@ -51,6 +52,11 @@ namespace SolrTest
                     case "4":
                     {
                         Search(solr);
+                        break;
+                    }
+                    case "5":
+                    {
+                        SetProgrammingFilestoDeleteTrue(solr);
                         break;
                     }
                     default:
@@ -95,18 +101,31 @@ namespace SolrTest
             solr.Commit();
         }
 
+        private static void SetProgrammingFilestoDeleteTrue(ISolrOperations<FileIndex> solr)
+        {
+            var solrQueryResults = solr.Query(new SolrQuery("matched_functions:\"Programming Files\""));
+            foreach (var solrQueryResult in solrQueryResults)
+            {
+                var atomicUpdateSpecs = new List<AtomicUpdateSpec>
+                {
+                    new AtomicUpdateSpec(FileIndex.Keys.Delete, AtomicUpdateType.Set, "true")
+                };
+                solr.AtomicUpdate(solrQueryResult, atomicUpdateSpecs);
+            }
+
+            solr.Commit();
+        }
+
         private static void UpdateData(ISolrOperations<FileIndex> solr)
         {
             Console.WriteLine("Updating Index");
-            var solrQueryResults = solr.Query(new SolrQuery("*"));
             var dictionary = GetDictionary();
+            var solrQueryResults = solr.Query(new SolrQuery("*"));
             foreach (var key in dictionary.Keys)
             {
                 foreach (var solrQueryResult in solrQueryResults)
                 {
                     var atomicUpdateSpecs = new List<AtomicUpdateSpec>();
-                    atomicUpdateSpecs.Add(new AtomicUpdateSpec(FileIndex.Keys.Delete, AtomicUpdateType.Set, "true"));
-
                     if (dictionary[key].IsMatch(solrQueryResult.FilePath))
                     {
                         if (!solrQueryResult.MatchedFunctions.Contains(key))
@@ -126,7 +145,12 @@ namespace SolrTest
                         }
                     }
 
-                    solr.AtomicUpdate(solrQueryResult, atomicUpdateSpecs);
+                    // don't do the update if there is nothing to do as it will
+                    // wipe out all of the data
+                    if (atomicUpdateSpecs.Any())
+                    {
+                        solr.AtomicUpdate(solrQueryResult, atomicUpdateSpecs);
+                    }
                 }
 
                 solr.Commit();
