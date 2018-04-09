@@ -944,5 +944,4 @@
   <field name="delete" type="boolean" indexed="true" stored="true" required="false" multiValued="false" />
   <field name="matched_functions" type="strings" indexed="true" stored="true" required="false" multiValued="true" />
   <field name="unmatched_functions" type="strings" indexed="true" stored="true" required="false" multiValued="true" />
-  <field name="otherValue" type="strings" indexed="true" stored="true" required="false" multiValued="false" />
 </schema>
