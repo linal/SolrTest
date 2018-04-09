@@ -27,6 +27,7 @@ namespace SolrTest
                 Console.WriteLine("\t[1] Delete");
                 Console.WriteLine("\t[2] Index");
                 Console.WriteLine("\t[3] Update");
+                Console.WriteLine("\t[4] Search");
                 Console.WriteLine("");
                 Console.Write("Action: ");
                 action = Console.ReadLine();
@@ -47,6 +48,11 @@ namespace SolrTest
                         UpdateData(solr);
                         break;
                     }
+                    case "4":
+                    {
+                        Search(solr);
+                        break;
+                    }
                     default:
                         Console.WriteLine($"Action not found: {action}");
                         break;
@@ -57,6 +63,28 @@ namespace SolrTest
 
             Console.WriteLine("Done. Press [Enter] to exit.");
             Console.ReadLine();
+        }
+
+        public static void Search(ISolrOperations<FileIndex> solr)
+        {
+            Console.Write("Enter Search Term: ");
+            var searchTerm = Console.ReadLine();
+
+            try
+            {
+                var solrQueryResults = solr.Query(new SolrQuery(searchTerm));
+                Console.WriteLine($"Count: {solrQueryResults.Count}");
+
+                foreach (var solrQueryResult in solrQueryResults)
+                {
+                    Console.WriteLine($"File Path: {solrQueryResult.FilePath}");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error performing search");
+                Console.WriteLine(e);
+            }
         }
 
         private static void DeleteIndex(ISolrOperations<FileIndex> solr)
