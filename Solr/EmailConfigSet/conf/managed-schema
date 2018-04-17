@@ -940,8 +940,12 @@
   <field name="" type="text_tpr" multiValued="">
   <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" />
   -->
-  <field name="file_path" type="string" indexed="true" stored="true" required="false" multiValued="false" />
-  <field name="delete" type="boolean" indexed="true" stored="true" required="false" multiValued="false" />
+  <field name="date_sent" type="pdate" indexed="true" stored="true" required="false" multiValued="false" />
+  <field name="to" type="string" indexed="true" stored="true" required="false" multiValued="false" />
+  <field name="from" type="string" indexed="true" stored="true" required="false" multiValued="false" />
+  <field name="subject" type="string" indexed="true" stored="true" required="false" multiValued="false" />
+  <field name="message_body" type="string" indexed="true" stored="true" required="false" multiValued="false" />
+
   <field name="matched_functions" type="strings" indexed="true" stored="true" required="false" multiValued="true" />
   <field name="unmatched_functions" type="strings" indexed="true" stored="true" required="false" multiValued="true" />
 </schema>
