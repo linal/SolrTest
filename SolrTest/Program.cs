@@ -16,8 +16,10 @@ namespace SolrTest
     {
         static void Main(string[] args)
         {
-            Startup.Init<FileIndex>("http://localhost:8983/solr/YeticodeCollection");
-            var solr = ServiceLocator.Current.GetInstance<ISolrOperations<FileIndex>>();
+            Startup.Init<FileIndex>("http://localhost:8983/solr/FilesCollection");
+            Startup.Init<EmailIndex>("http://localhost:8983/solr/EmailsCollection");
+            var fileIndexSolr = ServiceLocator.Current.GetInstance<ISolrOperations<FileIndex>>();
+            var emailIndexSolr = ServiceLocator.Current.GetInstance<ISolrOperations<EmailIndex>>();
 
             string action;
             do
@@ -36,27 +38,28 @@ namespace SolrTest
                 {
                     case "1":
                     {
-                        DeleteIndex(solr);
-                        break;
+                        DeleteIndex(fileIndexSolr);
+                        DeleteIndex(emailIndexSolr);
+                            break;
                     }
                     case "2":
                     {
-                        BuildIndex(solr);
+                        BuildIndex(fileIndexSolr, emailIndexSolr);
                         break;
                     }
                     case "3":
                     {
-                        UpdateData(solr);
+                        UpdateData(fileIndexSolr);
                         break;
                     }
                     case "4":
                     {
-                        Search(solr);
+                        Search(fileIndexSolr);
                         break;
                     }
                     case "5":
                     {
-                        SetProgrammingFilestoDeleteTrue(solr);
+                        SetProgrammingFilestoDeleteTrue(fileIndexSolr);
                         break;
                     }
                     default:
@@ -93,7 +96,7 @@ namespace SolrTest
             }
         }
 
-        private static void DeleteIndex(ISolrOperations<FileIndex> solr)
+        private static void DeleteIndex<T>(ISolrOperations<T> solr)
         {
             Console.WriteLine("Clearing Index");
             var solrQueryResults = solr.Query(new SolrQuery("*"));
@@ -157,31 +160,53 @@ namespace SolrTest
             }
         }
 
-        private static void BuildIndex(ISolrOperations<FileIndex> solr)
+        private static void BuildIndex(ISolrOperations<FileIndex> fileIndexSolr, ISolrOperations<EmailIndex> emailIndexSolr)
         {
             foreach (var file in Directory.GetFiles(@"C:\temp"))
             {
-                AddFileToIndex(solr, file);
+                AddFileToIndex(fileIndexSolr, file);
             }
 
-            solr.Commit();
+            AddEmailToIndex(emailIndexSolr, new DateTime(2011, 7,12, 10, 33, 0),  "John Smith", "Jane Doe", "Secret Squirrel Stuff",
+                "here is the top secret contents");
+
+            AddEmailToIndex(emailIndexSolr, new DateTime(2011, 7, 12, 10, 35, 0), "Jane Doe", "John Smith", "RE: Secret Squirrel Stuff",
+                "thanks for this super secret stuff");
         }
 
+        private static void AddEmailToIndex(ISolrOperations<EmailIndex> solr, DateTime dateSent, string to, string from, string subject,
+            string messageBody)
+        {
+            solr.Add(new EmailIndex
+            {
+                DateSent = dateSent,
+                To = to,
+                From = from,
+                Subject = subject,
+                MessageBody = messageBody
+            });
+        }
 
         private static void AddFileToIndex(ISolrOperations<FileIndex> solr, string file)
         {
-            var fileIndex = new FileIndex
-            {
-                Id = CreateId(file),
-                FilePath = file,
-                Delete = false,
-                UnmatchedFunctions = new List<string>(),
-                MatchedFunctions = new List<string>()
-            };
-
             Console.WriteLine($"Adding to index: {file}");
 
-            solr.Add(fileIndex);
+            using (FileStream fileStream = File.OpenRead(file))
+            {
+                    solr.Extract(
+                    new ExtractParameters(fileStream, Path.GetFileName(file))
+                    {
+                        ExtractFormat = ExtractFormat.Text,
+                        ExtractOnly = false,
+                        Fields = new List<ExtractField>
+                        {
+                            new ExtractField(FileIndex.Keys.FilePath, file),
+                            new ExtractField(FileIndex.Keys.Delete, "false")
+                        }
+                    });
+
+                solr.Commit();
+            }
         }
 
         public static Dictionary<string, Regex> GetDictionary()
